@@ -1,0 +1,15 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Generated output
+assignments.json
+feed.ics
+
+# Debug dumps
+debug/
