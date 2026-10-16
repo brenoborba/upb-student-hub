@@ -76,12 +76,19 @@ DESC_CLASS_HINTS = (
     "assignment-body-text",
 )
 
+INSTRUCTIONS_HEADINGS = ("instructions", "instruções", "instrucoes")
+
 
 # Sakai's conventional times when a date is shown without an explicit time.
 DEFAULT_OPEN_TIME = "00:00"
 DEFAULT_DUE_TIME = "23:55"
 
 TIME_RE = re.compile(r"\d{1,2}:\d{2}")
+
+# Sakai renders a built-in "Ajuda" (Help) link on the Assignments tool page,
+# e.g. /portal/help/main?help=sakai.assignment. Its URL contains "assignment"
+# but is not an assignment, so exclude help-system links from matching.
+_HELP_HREF_RE = re.compile(r"/help/|help=", re.I)
 
 
 def find_dates(text: str) -> list[str]:
@@ -271,6 +278,8 @@ def parse_assignment_detail(html: str, base_url: str) -> tuple[str | None, str |
 
 def _href_matches_assignment(href: str) -> bool:
     h = href.lower()
+    if _HELP_HREF_RE.search(h):
+        return False
     return "assignment" in h or "submission" in h
 
 
@@ -371,6 +380,15 @@ def _parse_list_fallback(soup: BeautifulSoup, base_url: str, course: str) -> lis
 
 
 def _find_description_el(soup: BeautifulSoup):
+    # Sakai renders the real assignment instructions in a `.textPanel` div
+    # immediately after an "Instructions" heading. Prefer that over the generic
+    # id/class hints, which otherwise match the boilerplate `.instruction` text.
+    for heading in soup.find_all(["h2", "h3", "h4", "h5", "h6"]):
+        if heading.get_text(" ", strip=True).lower() in INSTRUCTIONS_HEADINGS:
+            panel = heading.find_next_sibling()
+            if panel is not None:
+                return panel
+
     for cid in DESC_IDS:
         el = soup.find(id=cid)
         if el is not None:
