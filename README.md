@@ -1,6 +1,6 @@
 # upb-student-hub
 
-Log into **UPB.Virtual** (the Sakai LMS at `virtual.ipb.pt`) and extract your
+Log into **[IPB.Virtual](https://virtual.ipb.pt/portal/site/!gateway/tool/!gateway-110)** (the Sakai LMS at `virtual.ipb.pt`) and extract your
 assignments — title, status, open/due dates, description, and attachments — into
 a JSON dataset and a subscribable `.ics` calendar feed.
 
