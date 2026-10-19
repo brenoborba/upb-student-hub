@@ -65,6 +65,20 @@ semesters are skipped. Use `--all-sites` to include everything.
 By default assignments whose **due date has already passed** are skipped. Use
 `--include-past` to keep them.
 
+## Tests
+
+```bash
+# install runtime + test dependencies
+pip install -r requirements-dev.txt
+
+# run the unit test suite
+pytest
+```
+
+Tests live under `tests/` and cover the parsers, models, output writers, and
+configuration without touching the network. Run `pytest` on every iteration
+before pushing.
+
 ## Notes
 
 - Dates are normalized to ISO-8601 in the Europe/Lisbon timezone.
