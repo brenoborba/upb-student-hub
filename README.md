@@ -79,6 +79,10 @@ Tests live under `tests/` and cover the parsers, models, output writers, and
 configuration without touching the network. Run `pytest` on every iteration
 before pushing.
 
+A GitHub Actions workflow (`.github/workflows/tests.yml`) runs the suite
+automatically on pushes to `main`/`dev` and on every pull request, across
+Python 3.9–3.13.
+
 ## Notes
 
 - Dates are normalized to ISO-8601 in the Europe/Lisbon timezone.
