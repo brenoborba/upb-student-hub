@@ -45,6 +45,11 @@ def _stable_id(assignment) -> str:
     return f"upb-{digest}"
 
 
+def stable_id(assignment) -> str:
+    """Public stable identifier for an assignment, shared by sync and storage."""
+    return _stable_id(assignment)
+
+
 def _parse_due(assignment):
     if not assignment.due_at:
         return None
@@ -119,6 +124,19 @@ def get_credentials(credentials_path: str, token_path: str, scopes=None):
 def build_service(creds):
     _Request, _Credentials, build, _InstalledAppFlow = _import_google()
     return build("calendar", "v3", credentials=creds)
+
+
+def build_credentials_from_refresh_token(refresh_token: str, client_id: str, client_secret: str, scopes=None):
+    """Build OAuth credentials from a stored refresh token (no interactive flow)."""
+    _Request, Credentials, _build, _InstalledAppFlow = _import_google()
+    return Credentials(
+        token=None,
+        refresh_token=refresh_token,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=client_id,
+        client_secret=client_secret,
+        scopes=scopes or SCOPES,
+    )
 
 
 def get_or_create_calendar(service, name: str) -> str:
@@ -197,11 +215,21 @@ def sync_assignments(service, calendar_id: str, assignments, lead_hours: int = E
     return {"created": created, "updated": updated, "deleted": deleted}
 
 
-def sync_to_calendar(assignments, credentials_path: str, token_path: str,
-                     calendar_id: str = "", calendar_name: str = DEFAULT_CALENDAR_NAME,
-                     lead_hours: int = EVENT_LEAD_HOURS, include_past: bool = False) -> dict:
-    """End-to-end sync: authorize, resolve the target calendar, then sync."""
-    creds = get_credentials(credentials_path, token_path)
+def sync_with_credentials(creds, assignments, calendar_id: str = "",
+                          calendar_name: str = DEFAULT_CALENDAR_NAME,
+                          lead_hours: int = EVENT_LEAD_HOURS, include_past: bool = False) -> dict:
+    """Sync ``assignments`` using already-built OAuth ``creds``."""
     service = build_service(creds)
     target = calendar_id or get_or_create_calendar(service, calendar_name)
     return sync_assignments(service, target, assignments, lead_hours=lead_hours, include_past=include_past)
+
+
+def sync_to_calendar(assignments, credentials_path: str, token_path: str,
+                     calendar_id: str = "", calendar_name: str = DEFAULT_CALENDAR_NAME,
+                     lead_hours: int = EVENT_LEAD_HOURS, include_past: bool = False) -> dict:
+    """End-to-end sync from credential files: authorize, resolve calendar, then sync."""
+    creds = get_credentials(credentials_path, token_path)
+    return sync_with_credentials(
+        creds, assignments, calendar_id=calendar_id, calendar_name=calendar_name,
+        lead_hours=lead_hours, include_past=include_past,
+    )

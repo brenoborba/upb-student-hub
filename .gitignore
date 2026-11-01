@@ -14,5 +14,8 @@ venv/
 assignments.json
 feed.ics
 
+# Backend local SQLite database
+upb_hub.db
+
 # Debug dumps
 debug/

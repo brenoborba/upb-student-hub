@@ -1,2 +1,4 @@
 -r requirements.txt
+-r backend/requirements.txt
 pytest>=7.4
+httpx>=0.27

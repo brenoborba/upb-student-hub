@@ -91,6 +91,41 @@ calendar ID) or `UPB_GCAL_CALENDAR_NAME` in `.env`. To reuse an existing
 calendar, pass `--calendar-id <id>` (find the id under the calendar's Settings →
 "Calendar ID").
 
+## Backend (FastAPI)
+
+A multi-user API that stores each student's Sakai credentials (encrypted) and
+scrapes + syncs on demand. Lives in `backend/`.
+
+```bash
+pip install -r requirements-dev.txt      # includes backend deps
+# set ENCRYPTION_KEY in .env (see .env.example)
+uvicorn backend.app.main:app --reload    # run from the repo root
+```
+
+Interactive docs at `http://127.0.0.1:8000/docs`.
+
+### Endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/health` | liveness |
+| POST | `/api/users` | create a user (returns an API key once) |
+| PUT | `/api/users/{id}/sakai-credentials` | store encrypted Sakai login |
+| PUT | `/api/users/{id}/google-token` | store encrypted Google refresh token |
+| POST | `/api/users/{id}/sync` | scrape Sakai + sync Google Calendar |
+| GET | `/api/users/{id}/assignments` | list stored assignments |
+| GET | `/api/users/{id}/sync-runs` | recent sync status |
+
+Authenticate with the `X-API-Key` header. This is a placeholder auth scheme to
+be replaced by Google OAuth sign-in. The database defaults to SQLite
+(`upb_hub.db`, git-ignored); set `DATABASE_URL` to a Postgres URL for
+production.
+
+Throttling protects the Sakai host under multi-user load: a global token bucket
+in `upb/client.py` (~30 req/min, small burst) wraps every Sakai request, sync
+jobs are capped at 3 concurrent, and each user has a 15-minute cooldown
+(manual syncs bypass it).
+
 ## Tests
 
 ```bash
