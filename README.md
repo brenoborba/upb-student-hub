@@ -6,7 +6,7 @@ a JSON dataset and a subscribable `.ics` calendar feed.
 
 ## Requirements
 
-- Python 3.9+
+- Python 3.11+
 
 ## Setup
 
@@ -142,7 +142,7 @@ before pushing.
 
 A GitHub Actions workflow (`.github/workflows/tests.yml`) runs the suite
 automatically on pushes to `main`/`dev` and on every pull request, across
-Python 3.9–3.13.
+Python 3.11–3.13.
 
 ## Notes
 
