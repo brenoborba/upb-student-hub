@@ -65,6 +65,32 @@ semesters are skipped. Use `--all-sites` to include everything.
 By default assignments whose **due date has already passed** are skipped. Use
 `--include-past` to keep them.
 
+## Google Calendar live sync
+
+Instead of re-importing `feed.ics` by hand, sync directly to Google Calendar
+with the API. On each run events are created/updated/deleted to match your
+current assignments — colored red, with reminders — so the calendar stays up to
+date automatically.
+
+1. Create an **OAuth 2.0 Client ID** in
+   [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+   (Application type: **Desktop app**).
+2. Download it as `credentials.json` into the project root (it is git-ignored).
+3. Run:
+
+   ```bash
+   python scraper.py --sync-calendar
+   ```
+
+   The first run opens a browser to authorize access; the refresh token is
+   saved to `token.json` (git-ignored), so later runs are silent.
+
+By default events go into a dedicated calendar named **IPB.Virtual** (created
+automatically). Override the target with `UPB_GCAL_CALENDAR_ID` (a specific
+calendar ID) or `UPB_GCAL_CALENDAR_NAME` in `.env`. To reuse an existing
+calendar, pass `--calendar-id <id>` (find the id under the calendar's Settings →
+"Calendar ID").
+
 ## Tests
 
 ```bash
@@ -107,6 +133,7 @@ upb-student-hub/
 │   ├── assignments.py   # list + detail parsing
 │   ├── models.py        # data models
 │   ├── output.py        # JSON + ICS writers
+│   ├── gcal.py          # Google Calendar API sync (--sync-calendar)
 │   ├── config.py        # .env loading
 │   └── utils.py
 ├── requirements.txt

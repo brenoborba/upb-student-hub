@@ -1,5 +1,6 @@
 import argparse
 
+from upb import gcal
 from upb.assignments import scrape_assignments
 from upb.client import LoginError, SakaiClient
 from upb.config import load_config
@@ -34,6 +35,16 @@ def main(argv=None) -> None:
     )
     parser.add_argument("--json", dest="json_out", default="assignments.json")
     parser.add_argument("--ics", dest="ics_out", default="feed.ics")
+    parser.add_argument(
+        "--sync-calendar",
+        action="store_true",
+        help="sync assignments to Google Calendar via OAuth2 (instead of only writing .ics)",
+    )
+    parser.add_argument(
+        "--calendar-id",
+        default=None,
+        help="Google Calendar ID to sync into (overrides UPB_GCAL_CALENDAR_ID / name)",
+    )
     args = parser.parse_args(argv)
 
     cfg = load_config()
@@ -68,6 +79,25 @@ def main(argv=None) -> None:
     write_json(assignments, args.json_out)
     write_ics(assignments, args.ics_out)
     print(f"       Done -> {args.json_out}, {args.ics_out}")
+
+    if args.sync_calendar:
+        print("[5/5] Syncing to Google Calendar ...")
+        try:
+            stats = gcal.sync_to_calendar(
+                assignments,
+                credentials_path=cfg.gcal_credentials,
+                token_path=cfg.gcal_token,
+                calendar_id=args.calendar_id or cfg.gcal_calendar_id,
+                calendar_name=cfg.gcal_calendar_name,
+                include_past=args.include_past,
+            )
+        except gcal.GcalError as exc:
+            print(f"       ERROR: {exc}")
+            raise SystemExit(1)
+        print(
+            f"       Done -> {stats['created']} created, "
+            f"{stats['updated']} updated, {stats['deleted']} deleted."
+        )
 
 
 if __name__ == "__main__":
