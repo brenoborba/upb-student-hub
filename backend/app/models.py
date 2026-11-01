@@ -96,5 +96,7 @@ class SakaiNotification(Base):
     ref: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     event_date: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     formatted_event_date: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    body_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     read: Mapped[bool] = mapped_column(Boolean, default=False)
     first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

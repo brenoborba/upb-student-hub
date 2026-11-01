@@ -4,6 +4,7 @@ from upb.notifications import (
     clear_all_notifications,
     clear_notification,
     deduplicate,
+    fetch_notification_body,
     fetch_notifications,
     parse_alert,
 )
@@ -110,3 +111,39 @@ def test_deduplicate_orders_most_recent_first():
     c = Notification(notif_id=3, ref=None)
     out = deduplicate([a, b, c])
     assert [n.notif_id for n in out] == [5, 3, 1]
+
+
+def test_fetch_notification_body():
+    client = FakeClient({"body": "<p>Hello</p><p>World</p>"})
+    html, text = fetch_notification_body(client, "/announcement/msg/x/main/y")
+    assert html == "<p>Hello</p><p>World</p>"
+    assert text == "Hello\nWorld"
+    assert client.calls[0][0] == "direct/announcement/msg/x/main/y.json"
+
+
+def test_fetch_notification_body_missing():
+    client = FakeClient({"title": "no body"})
+    html, text = fetch_notification_body(client, "/announcement/msg/x/main/y")
+    assert html is None
+    assert text is None
+
+
+class RoutingClient:
+    def __init__(self, routes):
+        self.routes = routes
+
+    def get(self, path, **kwargs):
+        return FakeResponse(self.routes.get(path, {}))
+
+
+def test_fetch_notifications_includes_bodies():
+    client = RoutingClient(
+        {
+            "direct/portal/bullhornAlerts.json": {"alerts": [SAMPLE_ALERT]},
+            "direct" + SAMPLE_ALERT["ref"] + ".json": {"body": "<p>Hi there</p>"},
+        }
+    )
+    notifs = fetch_notifications(client)
+    assert len(notifs) == 1
+    assert notifs[0].body == "<p>Hi there</p>"
+    assert notifs[0].body_text == "Hi there"

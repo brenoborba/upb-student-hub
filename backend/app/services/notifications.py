@@ -34,6 +34,8 @@ def store_notifications(db: Session, user_id: int, notifications: list) -> None:
         row.ref = n.ref
         row.event_date = n.event_date
         row.formatted_event_date = n.formatted_event_date
+        row.body = n.body
+        row.body_text = n.body_text
     db.commit()
 
 

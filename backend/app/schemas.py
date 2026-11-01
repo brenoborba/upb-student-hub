@@ -74,6 +74,8 @@ class NotificationOut(BaseModel):
     ref: Optional[str] = None
     event_date: Optional[str] = None
     formatted_event_date: Optional[str] = None
+    body: Optional[str] = None
+    body_text: Optional[str] = None
     read: bool
     first_seen_at: datetime
 

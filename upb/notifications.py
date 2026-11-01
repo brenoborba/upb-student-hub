@@ -3,7 +3,8 @@
 Sakai exposes notifications as JSON via ``GET /direct/portal/bullhornAlerts.json``
 (not the WebAPI ``/api``, which is disabled on many instances). Each alert
 carries an ``event`` type, a human title, the course (``siteTitle``), the actor
-(``fromDisplayName``), and a ``url`` to the underlying item.
+(``fromDisplayName``), and a ``url`` to the underlying item. The item's full body
+(description) is available via ``GET /direct/{ref}.json``.
 """
 from __future__ import annotations
 
@@ -11,6 +12,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
+
+from bs4 import BeautifulSoup
 
 LISBON = ZoneInfo("Europe/Lisbon")
 
@@ -49,6 +52,8 @@ class Notification:
     event_date: Optional[str] = None
     formatted_event_date: Optional[str] = None
     deferred: bool = False
+    body: Optional[str] = None
+    body_text: Optional[str] = None
 
     @property
     def category(self) -> str:
@@ -70,6 +75,8 @@ class Notification:
             "event_date": self.event_date,
             "formatted_event_date": self.formatted_event_date,
             "deferred": self.deferred,
+            "body": self.body,
+            "body_text": self.body_text,
         }
 
 
@@ -131,12 +138,43 @@ def deduplicate(notifications: list[Notification]) -> list[Notification]:
     return result
 
 
-def fetch_notifications(client, dedupe: bool = True) -> list[Notification]:
+def _html_to_text(html: str) -> str:
+    if not html:
+        return ""
+    soup = BeautifulSoup(html, "html.parser")
+    lines = [" ".join(ln.split()) for ln in soup.get_text("\n").splitlines()]
+    return "\n".join(ln for ln in lines if ln)
+
+
+def fetch_notification_body(client, ref: str) -> tuple[Optional[str], Optional[str]]:
+    """Fetch an item's body via Sakai's EntityBroker JSON endpoint.
+
+    Returns ``(body_html, body_text)``, or ``(None, None)`` if unavailable.
+    """
+    if not ref:
+        return None, None
+    try:
+        data = client.get("direct" + ref + ".json").json()
+    except Exception:  # noqa: BLE001 - body is best-effort
+        return None, None
+    if not isinstance(data, dict):
+        return None, None
+    body = data.get("body")
+    if not body:
+        return None, None
+    return body, _html_to_text(body)
+
+
+def fetch_notifications(client, dedupe: bool = True, include_bodies: bool = True) -> list[Notification]:
     """Return the user's current (unread) bullhorn alerts."""
     data = client.get(BULLHORN_ALERTS_PATH).json()
     notifications = [parse_alert(a) for a in data.get("alerts", [])]
     if dedupe:
         notifications = deduplicate(notifications)
+    if include_bodies:
+        for n in notifications:
+            if n.ref:
+                n.body, n.body_text = fetch_notification_body(client, n.ref)
     return notifications
 
 

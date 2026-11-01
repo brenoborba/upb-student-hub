@@ -22,6 +22,7 @@ from ..schemas import (
     SyncRunOut,
     UserCreate,
     UserCreatedOut,
+    UserOut,
 )
 from ..services import notifications as notifications_service
 from ..services.sync import run_sync
@@ -44,6 +45,11 @@ def _current_user(
 def _require_owner(user: User, user_id: int) -> None:
     if user.id != user_id:
         raise HTTPException(status_code=403, detail="Forbidden")
+
+
+@router.get("/me", response_model=UserOut)
+def me(user: User = Depends(_current_user)):
+    return user
 
 
 @router.post("/users", response_model=UserCreatedOut, status_code=201)

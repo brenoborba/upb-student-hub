@@ -53,3 +53,12 @@ def test_sync_requires_credentials(client):
 
     r = client.post(f"/api/users/{user['id']}/sync", headers=h)
     assert r.status_code == 400
+
+
+def test_me_endpoint(client):
+    u = client.post("/api/users", json={"email": "me@x.y"}).json()
+
+    r = client.get("/api/me", headers={"X-API-Key": u["api_key"]})
+    assert r.status_code == 200
+    assert r.json()["id"] == u["id"]
+    assert r.json()["email"] == "me@x.y"

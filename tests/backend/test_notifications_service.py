@@ -43,6 +43,8 @@ def _notif(**kwargs):
         ref=None,
         event_date=None,
         formatted_event_date=None,
+        body=None,
+        body_text=None,
     )
     defaults.update(kwargs)
     return Notification(**defaults)
@@ -133,3 +135,21 @@ def test_list_notifications_api(client, db):
     assert len(data) == 1
     assert data[0]["title"] == "Hi"
     assert data[0]["read"] is False
+
+
+def test_sync_notifications_stores_body(monkeypatch, db):
+    user = _make_user(db)
+    _make_cred(db, user)
+
+    monkeypatch.setattr(notif_mod, "get_sakai_client", lambda db, u: FakeClient("x"))
+    monkeypatch.setattr(
+        notif_mod,
+        "fetch_notifications",
+        lambda client: [_notif(notif_id=9, body="<p>Hello</p>", body_text="Hello")],
+    )
+
+    notif_mod.sync_notifications(db, user)
+
+    row = db.query(SakaiNotification).filter_by(user_id=user.id, notif_id=9).one()
+    assert row.body == "<p>Hello</p>"
+    assert row.body_text == "Hello"
