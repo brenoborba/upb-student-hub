@@ -13,6 +13,7 @@ venv/
 # Generated output
 assignments.json
 feed.ics
+notifications.json
 
 # Backend local SQLite database
 upb_hub.db

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -76,3 +76,25 @@ class SyncRun(Base):
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     stats: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+
+class SakaiNotification(Base):
+    __tablename__ = "sakai_notifications"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    notif_id: Mapped[int] = mapped_column(index=True)
+    event: Mapped[str] = mapped_column(String(64))
+    category: Mapped[str] = mapped_column(String(32))
+    title: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    site_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    site_title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    from_user: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    from_display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    to_user: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ref: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    event_date: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    formatted_event_date: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    read: Mapped[bool] = mapped_column(Boolean, default=False)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

@@ -1,11 +1,23 @@
 import argparse
+import json
 
 from upb import gcal
 from upb.assignments import scrape_assignments
 from upb.client import LoginError, SakaiClient
 from upb.config import load_config
+from upb.notifications import fetch_notifications
 from upb.output import write_ics, write_json
 from upb.sites import discover_sites
+
+
+def _run_notifications(client) -> None:
+    notifications = fetch_notifications(client)
+    data = [n.to_dict() for n in notifications]
+    with open("notifications.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    print(f"       Fetched {len(notifications)} notification(s) -> notifications.json")
+    for n in notifications:
+        print(f"         [{n.category}] {n.site_title or ''} :: {n.title}")
 
 
 def main(argv=None) -> None:
@@ -45,12 +57,17 @@ def main(argv=None) -> None:
         default=None,
         help="Google Calendar ID to sync into (overrides UPB_GCAL_CALENDAR_ID / name)",
     )
+    parser.add_argument(
+        "--notifications",
+        action="store_true",
+        help="fetch Sakai notifications (bullhorn alerts) into notifications.json",
+    )
     args = parser.parse_args(argv)
 
     cfg = load_config()
     client = SakaiClient(cfg.base_url)
 
-    print(f"[1/4] Logging in to {cfg.base_url} ...")
+    print(f"Logging in to {cfg.base_url} ...")
     try:
         client.login(cfg.username, cfg.password)
     except LoginError as exc:
@@ -58,7 +75,12 @@ def main(argv=None) -> None:
         raise SystemExit(1)
     print("       Logged in.")
 
-    print("[2/4] Discovering courses ...")
+    if args.notifications:
+        print("Fetching notifications ...")
+        _run_notifications(client)
+        return
+
+    print("[1/3] Discovering courses ...")
     debug_dir = "debug" if args.debug else None
     sites = discover_sites(client, favorites_only=not args.all_sites, debug_dir=debug_dir)
     if not sites:
@@ -69,19 +91,19 @@ def main(argv=None) -> None:
         for sid, title in sites.items():
             print(f"         - {title} ({sid})")
 
-    print("[3/4] Scraping assignments ...")
+    print("[2/3] Scraping assignments ...")
     assignments = scrape_assignments(
         client, sites, delay=args.delay, debug_dir=debug_dir, include_past=args.include_past
     )
     print(f"       Collected {len(assignments)} assignment(s).")
 
-    print("[4/4] Writing output ...")
+    print("[3/3] Writing output ...")
     write_json(assignments, args.json_out)
     write_ics(assignments, args.ics_out)
     print(f"       Done -> {args.json_out}, {args.ics_out}")
 
     if args.sync_calendar:
-        print("[5/5] Syncing to Google Calendar ...")
+        print("[4/4] Syncing to Google Calendar ...")
         try:
             stats = gcal.sync_to_calendar(
                 assignments,

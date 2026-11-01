@@ -35,6 +35,14 @@ MAX_CONCURRENT_SYNCS = 3
 _sync_slots = threading.BoundedSemaphore(MAX_CONCURRENT_SYNCS)
 
 
+def get_sakai_client(db: Session, user: User) -> SakaiClient:
+    """Return a logged-in Sakai client for ``user`` (decrypting their credentials)."""
+    cred = db.query(SakaiCredential).filter_by(user_id=user.id).one()
+    client = SakaiClient(cred.base_url)
+    client.login(cred.username, security.decrypt(cred.password_enc))
+    return client
+
+
 def upsert_assignments(db: Session, user_id: int, assignments: list) -> None:
     """Replace the user's stored assignments with a fresh snapshot."""
     db.query(Assignment).filter_by(user_id=user_id).delete()
@@ -82,10 +90,8 @@ def run_sync(db: Session, user: User, include_past: bool = False, force: bool = 
     db.refresh(run)
 
     try:
-        cred = db.query(SakaiCredential).filter_by(user_id=user.id).one()
         with _sync_slots:
-            client = SakaiClient(cred.base_url)
-            client.login(cred.username, security.decrypt(cred.password_enc))
+            client = get_sakai_client(db, user)
             sites = discover_sites(client, favorites_only=True)
             assignments = scrape_assignments(client, sites, include_past=include_past)
 

@@ -56,3 +56,27 @@ class SyncRunOut(BaseModel):
     finished_at: Optional[datetime] = None
     error: Optional[str] = None
     stats: Optional[dict] = None
+
+
+class NotificationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    notif_id: Optional[int]
+    event: str
+    category: str
+    title: Optional[str] = None
+    site_id: Optional[str] = None
+    site_title: Optional[str] = None
+    from_user: Optional[str] = None
+    from_display_name: Optional[str] = None
+    url: Optional[str] = None
+    ref: Optional[str] = None
+    event_date: Optional[str] = None
+    formatted_event_date: Optional[str] = None
+    read: bool
+    first_seen_at: datetime
+
+
+class NotificationSyncOut(BaseModel):
+    count: int

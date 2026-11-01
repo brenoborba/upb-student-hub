@@ -5,15 +5,25 @@ from sqlalchemy.orm import Session
 
 from .. import security
 from ..db import get_db
-from ..models import Assignment, GoogleCredential, SakaiCredential, SyncRun, User
+from ..models import (
+    Assignment,
+    GoogleCredential,
+    SakaiCredential,
+    SakaiNotification,
+    SyncRun,
+    User,
+)
 from ..schemas import (
     AssignmentOut,
     GoogleCredentialIn,
+    NotificationOut,
+    NotificationSyncOut,
     SakaiCredentialIn,
     SyncRunOut,
     UserCreate,
     UserCreatedOut,
 )
+from ..services import notifications as notifications_service
 from ..services.sync import run_sync
 
 router = APIRouter(prefix="/api")
@@ -122,3 +132,49 @@ def list_sync_runs(
         .limit(20)
         .all()
     )
+
+
+@router.post("/users/{user_id}/notifications/sync", response_model=NotificationSyncOut)
+def sync_notifications(
+    user_id: int,
+    user: User = Depends(_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_owner(user, user_id)
+    if db.query(SakaiCredential).filter_by(user_id=user_id).first() is None:
+        raise HTTPException(status_code=400, detail="No Sakai credentials set for this user")
+    count = notifications_service.sync_notifications(db, user)
+    return NotificationSyncOut(count=count)
+
+
+@router.get("/users/{user_id}/notifications", response_model=list[NotificationOut])
+def list_notifications(
+    user_id: int,
+    user: User = Depends(_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_owner(user, user_id)
+    return (
+        db.query(SakaiNotification)
+        .filter_by(user_id=user_id)
+        .order_by(SakaiNotification.notif_id.desc())
+        .all()
+    )
+
+
+@router.post("/users/{user_id}/notifications/{notif_id}/read", status_code=204)
+def mark_notification_read(
+    user_id: int,
+    notif_id: int,
+    user: User = Depends(_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_owner(user, user_id)
+    row = (
+        db.query(SakaiNotification)
+        .filter_by(user_id=user_id, notif_id=notif_id)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    notifications_service.mark_read(db, user, row)
